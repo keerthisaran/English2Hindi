@@ -41,22 +41,60 @@ class PytorchEngine():
         nbatches=total_samples//batch_size
         total_loss=0
         mean_loss_array=[]
+        mean_acc_array=[]
         for epoch in range(epochs):
             with trange(nbatches) as t:
                 for batch_i in t:
                     X_batch,Y_batch=train_generator.get_batch(batch_size)
                     maxlens=[len(Y) for Y in Y_batch]
-                    batch_pred=self.model(X_batch,maxlens,Y_batch)
+                    batch_softmax=self.model(X_batch,maxlens,Y_batch)
                     #batch_pred should be tensor of shape (N,outdim), Y_batch (N) with int range 0,output_dim-1
-                    batch_loss=self.get_batchloss(batch_pred,Y_batch)
+                    batch_loss=self.get_batchloss(batch_softmax,Y_batch)
                     self.optim.zero_grad()
                     batch_loss.backward()
                     self.optim.step()
-                    total_loss+=batch_loss.item()
+                    with torch.no_grad():
+                        total_loss+=batch_loss.item()
+                        batch_correct=self.get_batchcorrects(batch_softmax,Y_batch)
+                        mean_loss_array.append(total_loss/(epoch*nbatches+batch_i+1))
+                        mean_acc_array.append(batch_correct/(epoch*nbatches+batch_i+1))
+                        t.set_postfix(epoch=epoch,loss=batch_loss.item(),cur_mean_loss=mean_loss_array[-1],mean_acc_array=mean_acc_array[-1])
+                    # if test_generator is not None:
+                        
+                    #     with torch.no_grad():
+                    #         total_samples_valid=test_generator.total_samples
+                    #         nbatches_valid=total_samples_valid//batch_size
+                    #         total_corrects=0
+                    #         total_samples=0
+                    #         for batch_i_valid in range(nbatches_valid):
+
+                    #             X_batch,Y_batch=test_generator.get_batch(batch_size)
+                    #             batch_softmax=self.model(X_batch,maxlens,Y_batch)
+                    #             batch_correct=self.get_batchcorrects(batch_softmax,Y_batch)
+                    #             total_corrects+=batch_correct
+                    #             total_samples+=len(Y_batch)
+                    #         accuracy=total_corrects/total_samples
+                    #         print('valid accuracy = {accuracy}'.format(accuracy=accuracy))
                     
-                    mean_loss_array.append(total_loss/(epoch*nbatches+batch_i+1))
-                    t.set_postfix(epoch=epoch,loss=batch_loss.item(),cur_mean_loss=mean_loss_array[-1])
-        return mean_loss_array
+
+
+
+
+
+
+
+        return mean_loss_array,mean_acc_array
+    
+    def get_batchcorrects(self,batch_softmax,Y_batch):
+        correct_words=0
+        for Y_pred_softmax,Y in zip(batch_softmax,Y_batch):
+            Y_pred=torch.argmax(Y_pred_softmax,dim=-1)
+            correct_words+=(Y_pred==Y).prod().item()
+        return correct_words
+
+        
+
+
 
     def get_batchloss(self,batch_pred,Y_batch):
         batch_loss=torch.zeros((1,),dtype=torch.float32)

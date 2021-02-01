@@ -89,12 +89,16 @@ class Eng2HindiDataloaderBuilder():
 
 if __name__ == "__main__":
     
-    x=Eng2HindiDataloaderBuilder()
-    train_generator=x.get_dataloader()
-    from models import Enc2DecWithAttention
-    net=Enc2DecWithAttention(train_generator.len_english_chars,256,train_generator.len_hindi_chars)
+    train_loaderbuilder=Eng2HindiDataloaderBuilder()
+    test_loaderbuilder=Eng2HindiDataloaderBuilder('inputs/test_data.xml')
+
+    train_generator=train_loaderbuilder.get_dataloader()
+    test_generator=test_loaderbuilder.get_dataloader()
+
+    from models import Enc2DecWithAttentionBidir
+    net=Enc2DecWithAttentionBidir(train_generator.len_english_chars,128,train_generator.len_hindi_chars)
     net.compile()
-    net.fit(train_generator)
+    net.fit(train_generator,test_generator=test_generator)
 
 
 
