@@ -58,7 +58,7 @@ class PytorchEngine():
                         batch_correct=self.get_batchcorrects(batch_softmax,Y_batch)
                         mean_loss_array.append(total_loss/(epoch*nbatches+batch_i+1))
                         mean_acc_array.append(batch_correct/(epoch*nbatches+batch_i+1))
-                        t.set_postfix(epoch=epoch,loss=batch_loss.item(),cur_mean_loss=mean_loss_array[-1],mean_acc_array=mean_acc_array[-1])
+                        t.set_postfix(epoch=epoch,loss=batch_loss.item(),cur_mean_loss=mean_loss_array[-1],batch_correct=batch_correct)
                     # if test_generator is not None:
                         
                     #     with torch.no_grad():
