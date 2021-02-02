@@ -59,31 +59,26 @@ class PytorchEngine():
                         mean_loss_array.append(total_loss/(epoch*nbatches+batch_i+1))
                         mean_acc_array.append(batch_correct/(epoch*nbatches+batch_i+1))
                         t.set_postfix(epoch=epoch,loss=batch_loss.item(),cur_mean_loss=mean_loss_array[-1],batch_correct=batch_correct)
-                    # if test_generator is not None:
-                        
-                    #     with torch.no_grad():
-                    #         total_samples_valid=test_generator.total_samples
-                    #         nbatches_valid=total_samples_valid//batch_size
-                    #         total_corrects=0
-                    #         total_samples=0
-                    #         for batch_i_valid in range(nbatches_valid):
-
-                    #             X_batch,Y_batch=test_generator.get_batch(batch_size)
-                    #             batch_softmax=self.model(X_batch,maxlens,Y_batch)
-                    #             batch_correct=self.get_batchcorrects(batch_softmax,Y_batch)
-                    #             total_corrects+=batch_correct
-                    #             total_samples+=len(Y_batch)
-                    #         accuracy=total_corrects/total_samples
-                    #         print('valid accuracy = {accuracy}'.format(accuracy=accuracy))
-                    
-
-
-
-
-
+            if test_generator:
+                print(self.calculate_testaccuracy(test_generator))
 
 
         return mean_loss_array,mean_acc_array
+    
+    def calculate_testaccuracy(self,test_generator):
+        n_samples=test_generator.total_samples
+        batch_size=n_samples
+        c=0
+        X_batch,Y_batch=test_generator.get_batch(batch_size)
+        with torch.no_grad():
+            maxlens=[len(y) for y in Y_batch]
+            batch_softmax=self.model(X_batch,maxlens,Y_batch)
+            c+=self.get_batchcorrects(batch_softmax,Y_batch)
+        
+        return c/batch_size
+
+
+
     
     def get_batchcorrects(self,batch_softmax,Y_batch):
         correct_words=0
@@ -91,10 +86,6 @@ class PytorchEngine():
             Y_pred=torch.argmax(Y_pred_softmax,dim=-1)
             correct_words+=(Y_pred==Y).prod().item()
         return correct_words
-
-        
-
-
 
     def get_batchloss(self,batch_pred,Y_batch):
         batch_loss=torch.zeros((1,),dtype=torch.float32)
@@ -121,8 +112,6 @@ class Enc2DecWithAttention(torch.nn.Module):
 
         self.output_layer=torch.nn.Linear(self.encoder_decoder_hidden_dim,self.output_dim)        
         self.output_softmaxlog=torch.nn.LogSoftmax(dim=-1)
-
-        self.engine=PytorchEngine(self)
 
 
     def forwardsample(self,X,max_len,ground_truth):
@@ -172,11 +161,6 @@ class Enc2DecWithAttention(torch.nn.Module):
         
         return batch_pred
     
-    def fit(self,*args,**kwargs):
-        return self.engine.fit(*args,**kwargs)
-    
-    def compile(self,*args,**kwargs):
-        return self.engine.compile(*args,**kwargs)
 
 
 
@@ -253,12 +237,6 @@ class Enc2DecWithAttentionBidir(torch.nn.Module):
             batch_pred.append(Y_hat)
         
         return batch_pred
-    
-    def fit(self,*args,**kwargs):
-        return self.engine.fit(*args,**kwargs)
-    
-    def compile(self,*args,**kwargs):
-        return self.engine.compile(*args,**kwargs)
 
 
 
